@@ -1,0 +1,85 @@
+from typing import Any, Iterable
+from time import time
+from doc.models import Author, Doc, Access, Token
+from doc.serializers import AuthorSerializer, DocSerializer
+from rest_framework.views import APIView
+from rest_framework.request import Request
+from rest_framework.response import Response
+from doc.responses import resp
+from doc.utils import api, catch_biz_exception, now, success_response
+from doc import biz
+from doc.exceptions import BizException
+
+def u(request: Request) -> Author:
+    s = request.query_params.get("token", None)
+    return Token.valid(s)
+
+# Create your views here.
+class AuthorList(APIView):
+
+    @api(AuthorSerializer, many=True)
+    def get(self, request: Request):
+        nickname = request.query_params.get("nickname", None)
+        return biz.get_authors(nickname)
+
+    @api(AuthorSerializer)
+    def post(self, request: Request):
+        data = request.data
+        return biz.author_register(data)
+
+
+class AuthorDetail(APIView):
+
+    @api(AuthorSerializer)
+    def get(self, request: Request, pk):
+        return biz.get_author(pk)
+    
+    @api(AuthorSerializer)
+    def put(self, request: Request, pk):
+        return biz.edit_author_profile(pk, request.data, u(request))
+        
+
+
+class AuthView(APIView):
+
+    @api()
+    def post(self, request: Request):
+        email = request.data.get("email", None)
+        password = request.data.get("password", None)
+        return biz.login(email, password)
+
+
+class DocList(APIView):
+
+    @api(DocSerializer, many=True)
+    def get(self, request: Request, role, author_id):
+        return biz.get_doc_by_author_with_role(author_id, role, u(request))
+
+    @api(DocSerializer)
+    def post(self, request: Request, role, author_id):
+        return biz.create_doc(request.data, author_id, u(request))
+
+
+class DocDetail(APIView):
+    
+    @api(DocSerializer)
+    def get(self, request: Request, pk):
+        return biz.get_doc(pk, u(request))
+    
+    @api(DocSerializer)
+    def put(self, request: Request, pk):
+        return biz.edit_doc_info(pk, request.data, u(request))
+
+    @api(DocSerializer)
+    def delete(self, request: Request, pk):
+        return biz.delete_doc(pk, u(request))
+
+
+class AccessGroupView(APIView):
+    
+    @api(DocSerializer)
+    def post(self, request: Request):
+        doc_id = request.data.get("doc_id", None)
+        author_id = request.data.get("author_id", None)
+        role = request.data.get("role", None)
+        return biz.grant_doc_to_author(doc_id, author_id, role, u(request))
