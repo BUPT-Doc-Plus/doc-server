@@ -5,13 +5,15 @@ from doc.serializers import AuthorSerializer, DocSerializer
 from doc.utils import serialized, success_response
 from doc.exceptions import BizException
 
-def get_authors(nickname: str) -> QuerySet:
+def get_authors(keyword: str) -> QuerySet:
     '''
     用户列表
     '''
-    if nickname is None:
+    if keyword is None:
         return Author.objects.all()
-    return Author.objects.filter(nickname=nickname)
+    nickname_result = Author.objects.filter(nickname__contains=keyword)
+    email_result = Author.objects.filter(email__contains=keyword)
+    return nickname_result.union(email_result)
 
 def author_register(data: Dict) -> Author:
     '''
@@ -102,7 +104,7 @@ def create_doc(doc_data: Dict, author_id: int, request_author: Author) -> Doc:
     srlzr = DocSerializer(data=doc_data)
     if srlzr.is_valid():
         doc = srlzr.save()
-        access = Access.objects.create(author=author, doc=doc, mod=2)
+        access = Access.objects.create(author=author, doc=doc, role=2)
         access.save()
         return doc
     raise BizException("common.bad_request", srlzr.errors)
@@ -156,6 +158,34 @@ def grant_doc_to_author(doc_id: int, author_id: int, role: int, request_author: 
     if role not in Access.VALID_ROLES:
         raise BizException("doc.invalid_role")
     author = get_author(author_id)
-    access = Access.objects.create(doc=doc, author=author, mod=role)
-    access.save()
+    if Access.can_dominate(author, doc):
+        raise BizException("doc.cannot_edit_d")
+    existence = Access.objects.filter(doc=doc, author=author)
+    if len(existence) == 0:
+        access = Access.objects.create(doc=doc, author=author, role=role)
+        access.save()
+    else:
+        access = existence[0]
+        access.role = role
+        access.save()
     return doc
+
+def cancel_access_to_doc(doc_id: int, author_id: int, request_author: Author) -> Doc:
+    '''
+    取消某用户对某文档的所有权限
+    '''
+    if doc_id is None or author_id is None:
+        raise BizException("common.bad_request")
+    doc = get_doc(doc_id, request_author)
+    if Access.can_dominate(request_author, doc):
+        # 不能取消创建者的权限
+        if author_id == request_author.pk:
+            raise BizException("doc.cannot_edit_d")
+        Access.objects.filter(doc_id=doc_id, author_id=author_id).delete()
+        return doc
+    # 非创建者只能取消自己的权限
+    if author_id != request_author.pk:
+        raise BizException("doc.forbidden_cancel")
+    Access.objects.filter(doc_id=doc_id, author_id=author_id).delete()
+    return doc
+    

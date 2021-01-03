@@ -2,10 +2,15 @@ from typing import Iterable
 from doc.models import Author, Doc, Access
 from rest_framework import serializers
 
+class AuthorRelatedExpandedField(serializers.RelatedField):
+    def to_representation(self, value):
+        return AuthorSerializer(value).data
+
 class DocAccessSerializer(serializers.HyperlinkedModelSerializer):
+    author = AuthorRelatedExpandedField(read_only=True)
     class Meta:
         model = Access
-        fields = ["author_id", "role"]
+        fields = ["author", "role"]
 
 
 class DocAccessListField(serializers.RelatedField):

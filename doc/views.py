@@ -19,8 +19,8 @@ class AuthorList(APIView):
 
     @api(AuthorSerializer, many=True)
     def get(self, request: Request):
-        nickname = request.query_params.get("nickname", None)
-        return biz.get_authors(nickname)
+        keyword = request.query_params.get("q", None)
+        return biz.get_authors(keyword)
 
     @api(AuthorSerializer)
     def post(self, request: Request):
@@ -75,7 +75,7 @@ class DocDetail(APIView):
         return biz.delete_doc(pk, u(request))
 
 
-class AccessGroupView(APIView):
+class AccessListView(APIView):
     
     @api(DocSerializer)
     def post(self, request: Request):
@@ -83,3 +83,10 @@ class AccessGroupView(APIView):
         author_id = request.data.get("author_id", None)
         role = request.data.get("role", None)
         return biz.grant_doc_to_author(doc_id, author_id, role, u(request))
+
+
+class AccessDetailView(APIView):
+
+    @api(DocSerializer)
+    def delete(self, request: Request, doc_id, author_id):
+        return biz.cancel_access_to_doc(doc_id, author_id, u(request))

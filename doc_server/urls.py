@@ -24,5 +24,6 @@ urlpatterns = [
     path('auth/', views.AuthView.as_view()),
     path('doc/<str:role>/<int:author_id>', views.DocList.as_view()),
     path('doc/<int:pk>', views.DocDetail.as_view()),
-    path('invite/', views.AccessGroupView.as_view()),
+    path('invite/', views.AccessListView.as_view()),
+    path('kick/<int:doc_id>/<int:author_id>', views.AccessDetailView.as_view()),
 ]
