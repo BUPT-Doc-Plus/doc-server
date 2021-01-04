@@ -21,7 +21,7 @@ class DocAccessListField(serializers.RelatedField):
 class AuthorSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Author
-        fields = ["id", "email", "nickname"]
+        fields = ["id", "email", "nickname", "active"]
 
 
 class DocSerializer(serializers.HyperlinkedModelSerializer):
