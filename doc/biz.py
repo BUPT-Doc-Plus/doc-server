@@ -1,9 +1,11 @@
 from typing import Dict, Iterable, List
+from doc_server import settings
 from django.db.models.query import QuerySet
 from doc.models import Author, Token, Doc, Access
 from doc.serializers import AuthorSerializer, DocSerializer
-from doc.utils import serialized, success_response
+from doc.utils import gen_token, serialized, success_response, parse_email, gen_valid_code, val_valid_code
 from doc.exceptions import BizException
+from django.core.mail import send_mail
 
 def get_authors(keyword: str) -> QuerySet:
     '''
@@ -15,20 +17,56 @@ def get_authors(keyword: str) -> QuerySet:
     email_result = Author.objects.filter(email__contains=keyword)
     return nickname_result.union(email_result)
 
-def author_register(data: Dict) -> Author:
+def author_exists(email: str) -> Author:
+    '''
+    用户是否存在
+    '''
+    authors = Author.objects.filter(email=email)
+    return authors[0] if len(authors) else None
+
+def author_register(data: Dict) -> str:
     '''
     用户注册
     '''
-    srlzr = AuthorSerializer(data=data)
-    if srlzr.is_valid():
-        author = srlzr.save()
-        pwd = data.get("password")
-        if pwd is None:
-            raise BizException("common.bad_request")
-        author.set_password(pwd)
+    email = data["email"]
+    password = data["password"]
+    nickname = data["nickname"]
+    authors = Author.objects.filter(email=email)
+    if len(authors) == 0:
+        srlzr = AuthorSerializer(data=data)
+        if srlzr.is_valid():
+            author = srlzr.save()
+            pwd = data.get("password")
+            if pwd is None:
+                raise BizException("common.bad_request")
+            author.set_password(pwd)
+            author.save()
+            token = Token.objects.create(author=author).content
+            send_mail("DocPlus-欢迎来到DocPlus", parse_email(gen_valid_code(token), author.nickname), settings.DEFAULT_FROM_EMAIL, [author.email,])
+            return token
+        raise BizException("common.bad_request", srlzr.errors)
+    elif not authors[0].active:
+        author: Author = authors[0]
+        author.nickname = nickname
+        author.set_password(password)
         author.save()
-        return author
-    raise BizException("common.bad_request", srlzr.errors)
+        token = gen_token()
+        tk = Token.objects.get(author=author)
+        tk.content = token
+        tk.save()
+        send_mail("DocPlus-欢迎来到DocPlus", parse_email(gen_valid_code(token), author.nickname), settings.DEFAULT_FROM_EMAIL, [author.email,])
+        return token
+    else:
+        raise BizException("register.duplicated")
+
+def activate(valid_code: str, token: str) -> str:
+    if val_valid_code(valid_code, token):
+        author = Token.objects.get(content=token).author
+        author.active = True
+        author.save()
+        return token
+    else:
+        raise BizException("login.invalid")
 
 def get_author(author_id: int) -> Author:
     '''
@@ -38,6 +76,12 @@ def get_author(author_id: int) -> Author:
     if len(authors) == 0:
         raise BizException("common.not_found")
     return authors[0]
+
+def get_author_by_token(token: str) -> Author:
+    try:
+        return Token.objects.get(content=token).author
+    except:
+        raise BizException("login.invalid")
 
 def edit_author_profile(author_id: int, data: Dict, request_author: Author) -> Author:
     '''
