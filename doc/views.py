@@ -22,10 +22,25 @@ class AuthorList(APIView):
         keyword = request.query_params.get("q", None)
         return biz.get_authors(keyword)
 
-    @api(AuthorSerializer)
+    @api()
     def post(self, request: Request):
         data = request.data
         return biz.author_register(data)
+
+
+class AuthorCheck(APIView):
+
+    @api(AuthorSerializer)
+    def get(self, request: Request):
+        email = request.query_params.get("email", None)
+        return biz.author_exists(email)
+
+    @api()
+    def post(self, request: Request):
+        code = request.data.get("code", None)
+        token = request.data.get("token", None)
+        print(code, token)
+        return biz.activate(code, token)
 
 
 class AuthorDetail(APIView):
@@ -37,7 +52,6 @@ class AuthorDetail(APIView):
     @api(AuthorSerializer)
     def put(self, request: Request, pk):
         return biz.edit_author_profile(pk, request.data, u(request))
-        
 
 
 class AuthView(APIView):
@@ -90,3 +104,11 @@ class AccessDetailView(APIView):
     @api(DocSerializer)
     def delete(self, request: Request, doc_id, author_id):
         return biz.cancel_access_to_doc(doc_id, author_id, u(request))
+
+
+class TokenReverseView(APIView):
+
+    @api(AuthorSerializer)
+    def get(self, request: Request):
+        token = request.query_params.get("token", None)
+        return biz.get_author_by_token(token)
