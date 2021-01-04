@@ -21,6 +21,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('author/', views.AuthorList.as_view()),
     path('author/<int:pk>', views.AuthorDetail.as_view()),
+    path('reveal/', views.TokenReverseView.as_view()),
+    path('check/author', views.AuthorCheck.as_view()),
     path('auth/', views.AuthView.as_view()),
     path('doc/<str:role>/<int:author_id>', views.DocList.as_view()),
     path('doc/<int:pk>', views.DocDetail.as_view()),
