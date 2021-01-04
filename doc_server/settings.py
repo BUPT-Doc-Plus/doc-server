@@ -53,12 +53,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# cross origin
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ORIGIN_WHITELIST = (
     '*',
 )
-
 CORS_ALLOW_METHODS = (
     'DELETE',
     'GET',
@@ -68,7 +68,6 @@ CORS_ALLOW_METHODS = (
     'PUT',
     'VIEW',
 )
-
 CORS_ALLOW_HEADERS = (
     'XMLHttpRequest',
     'X_FILENAME',
@@ -82,6 +81,15 @@ CORS_ALLOW_HEADERS = (
     'x-requested-with',
     'Pragma',
 )
+
+# emailing
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_USE_TLS = False
+EMAIL_HOST = 'smtp.163.com'
+EMAIL_PORT = 25
+EMAIL_HOST_USER = 'liadrinz@163.com'
+EMAIL_HOST_PASSWORD = 'AVIGHTZYNSINDXZX'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 ROOT_URLCONF = 'doc_server.urls'
 
