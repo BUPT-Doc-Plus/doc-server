@@ -17,6 +17,15 @@ def digest(s: str, iter=3) -> str:
         s = base64.b64encode(s.encode()).decode()
     return s
 
+def gen_valid_code(token) -> str:
+    return digest(token)[:6].upper()
+
+def val_valid_code(code, token) -> bool:
+    return code == gen_valid_code(token)
+
+def parse_email(code, nickname) -> str:
+    return "{}，欢迎来到Doc Plus，您的验证码是：{}".format(nickname, code)
+
 def gen_token() -> str:
     base = [chr(i) for i in range(128)]
     random.shuffle(base)
@@ -32,7 +41,10 @@ def success_response(name: str):
 def serialized(serializer: Type[Serializer], many=False):
     def foo(func):
         def bar(*args, **kwargs):
-            return serializer(func(*args, **kwargs), many=many).data
+            data = func(*args, **kwargs)
+            if data is not None:
+                return serializer(data, many=many).data
+            return None
         return bar
     return foo
 
