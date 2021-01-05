@@ -1,11 +1,18 @@
+import json
 from typing import Dict, Iterable, List
 from doc_server import settings
 from django.db.models.query import QuerySet
-from doc.models import Author, Token, Doc, Access
+from doc.models import Author, Token, Doc, Access, DocTree
 from doc.serializers import AuthorSerializer, DocSerializer
-from doc.utils import gen_token, serialized, success_response, parse_email, gen_valid_code, val_valid_code
 from doc.exceptions import BizException
 from django.core.mail import send_mail
+from doc.utils import (
+    gen_token,
+    parse_email,
+    gen_valid_code,
+    val_valid_code,
+    trim_doc_tree,
+    extract_doc_from_root)
 
 def get_authors(keyword: str) -> QuerySet:
     '''
@@ -232,4 +239,44 @@ def cancel_access_to_doc(doc_id: int, author_id: int, request_author: Author) ->
         raise BizException("doc.forbidden_cancel")
     Access.objects.filter(doc_id=doc_id, author_id=author_id).delete()
     return doc
-    
+
+def complete_doc_tree(tree: DocTree, author: Author) -> None:
+    root = json.loads(tree.content)
+    docs_in_tree = extract_doc_from_root(root)
+    all_docs = set([item["doc_id"] for item in Access.objects.filter(author=author).values("doc_id")])
+    sup_docs = all_docs.difference(docs_in_tree)
+    if len(sup_docs) == 0:
+        return
+    sup_docs: Iterable[Doc] = Doc.objects.filter(pk__in=sup_docs)
+    for sup_doc in sup_docs:
+        root["children"][sup_doc.label + "-" + str(sup_doc.pk)] = {"id": sup_doc.pk}
+    tree.content = json.dumps(root, ensure_ascii=False)
+    tree.save()
+
+def get_doc_tree_of(author_id: int, request_author: Author) -> DocTree:
+    '''
+    获取用户的文档树
+    '''
+    if request_author is None or request_author.pk != author_id:
+        raise BizException("common.forbidden")
+    trees = DocTree.objects.filter(author_id=author_id)
+    if len(trees) == 0:
+        tree = DocTree.objects.create(author_id=author_id)
+        complete_doc_tree(tree, request_author)
+        return tree
+    complete_doc_tree(trees[0], request_author)
+    return trees[0]
+
+def save_doc_tree(author_id: int, content: str, request_author: Author) -> DocTree:
+    '''
+    保存用户的文档树
+    '''
+    if content is None:
+        raise BizException("common.bad_request")
+    if request_author.pk != author_id:
+        raise BizException("common.forbidden")
+    content = trim_doc_tree(content)
+    tree = get_doc_tree_of(author_id, request_author)
+    tree.content = content
+    tree.save()
+    return tree

@@ -1,5 +1,5 @@
 from typing import Iterable
-from doc.models import Author, Doc, Access
+from doc.models import Author, Doc, Access, DocTree
 from rest_framework import serializers
 
 class AuthorRelatedExpandedField(serializers.RelatedField):
@@ -29,3 +29,10 @@ class DocSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Doc
         fields = ["id", "label", "type", "doc_accessible"]
+
+
+class DocTreeSerializer(serializers.HyperlinkedModelSerializer):
+    author = AuthorRelatedExpandedField(read_only=True)
+    class Meta:
+        model = DocTree
+        fields = ["id", "author", "content", "timestamp"]

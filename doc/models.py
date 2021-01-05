@@ -2,7 +2,7 @@ from time import time
 from typing import Iterable
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from doc.utils import gen_token, now
+from doc.utils import gen_token, now, default_doc_tree
 
 
 # Create your models here.
@@ -84,3 +84,8 @@ class Token(models.Model):
     @staticmethod
     def generate() -> str:
         return gen_token()
+
+class DocTree(models.Model):
+    author = models.OneToOneField(Author, related_name="author_doc_tree", on_delete=models.CASCADE)
+    content = models.TextField(default=default_doc_tree)
+    timestamp = models.IntegerField(default=now)

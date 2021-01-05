@@ -1,12 +1,12 @@
 from typing import Any, Iterable
 from time import time
 from doc.models import Author, Doc, Access, Token
-from doc.serializers import AuthorSerializer, DocSerializer
+from doc.serializers import AuthorSerializer, DocSerializer, DocTreeSerializer
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from doc.responses import resp
-from doc.utils import api, catch_biz_exception, now, success_response
+from doc.utils import api
 from doc import biz
 from doc.exceptions import BizException
 
@@ -112,3 +112,15 @@ class TokenReverseView(APIView):
     def get(self, request: Request):
         token = request.query_params.get("token", None)
         return biz.get_author_by_token(token)
+
+
+class DocTreeView(APIView):
+
+    @api(DocTreeSerializer)
+    def get(self, request: Request, author_id: int):
+        return biz.get_doc_tree_of(author_id, u(request))
+    
+    @api(DocTreeSerializer)
+    def post(self, request: Request, author_id: int):
+        content = request.data.get("content", None)
+        return biz.save_doc_tree(author_id, content, u(request))

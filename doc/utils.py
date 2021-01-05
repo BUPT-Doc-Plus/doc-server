@@ -1,10 +1,11 @@
 import base64
+import json
 from doc.responses import resp
 from doc.exceptions import BizException
 import random
 from hashlib import md5
 from time import time
-from typing import Type
+from typing import List, Set, Type
 
 from rest_framework.serializers import Serializer
 
@@ -71,3 +72,28 @@ def api(serializer=None, many=False, success_resp_name="common.success"):
                 return func(*args, **kwargs)
         return bar
     return foo
+
+def default_doc_tree():
+    return json.dumps({"children": {}})
+
+def trim_doc_tree(content: str) -> str:
+    def trim(root: dict) -> None:
+        if "children" not in root:
+            id = root["id"]
+            root.clear()
+            root["id"] = id
+        else:
+            for key in root["children"]:
+                trim(root["children"][key])
+    root = json.loads(content)
+    trim(root)
+    return json.dumps(root, ensure_ascii=False)
+
+def extract_doc_from_root(root: dict) -> Set[int]:
+    if "children" not in root:
+        return set([root["id"]])
+    results = set([])
+    for key in root["children"]:
+        for res in extract_doc_from_root(root['children'][key]):
+            results.add(res)
+    return results
