@@ -1,7 +1,7 @@
 from typing import Any, Iterable
 from time import time
 from doc.models import Author, Doc, Access, Token
-from doc.serializers import AuthorSerializer, DocSerializer, DocTreeSerializer
+from doc.serializers import AuthorSerializer, DocAccessSerializer, DocSerializer, DocTreeSerializer
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -91,6 +91,12 @@ class DocDetail(APIView):
 
 class AccessListView(APIView):
     
+    @api(DocAccessSerializer)
+    def get(self, request: Request):
+        author_id = request.query_params.get("author_id", None)
+        doc_id = request.query_params.get("doc_id", None)
+        return biz.query_access(author_id, doc_id, u(request))
+
     @api(DocSerializer)
     def post(self, request: Request):
         doc_id = request.data.get("doc_id", None)
