@@ -58,9 +58,14 @@ def author_register(data: Dict) -> str:
         author.set_password(password)
         author.save()
         token = gen_token()
-        tk = Token.objects.get(author=author)
-        tk.content = token
-        tk.save()
+        tks = Token.objects.filter(author=author)
+        if len(tks):
+            tk = tks[0]
+            tk = Token.objects.get(author=author)
+            tk.content = token
+            tk.save()
+        else:
+            tk = Token.objects.create(author=author, content=token)
         send_mail("DocPlus-欢迎来到DocPlus", parse_email(gen_valid_code(token), author.nickname), settings.DEFAULT_FROM_EMAIL, [author.email,])
         return token
     else:
@@ -280,3 +285,16 @@ def save_doc_tree(author_id: int, content: str, request_author: Author) -> DocTr
     tree.content = content
     tree.save()
     return tree
+
+def query_access(author_id: int, doc_id: int, request_author: Author) -> Access:
+    '''
+    查询权限
+    '''
+    u_accesses = Access.objects.filter(author=request_author, doc_id=doc_id)
+    if len(u_accesses) == 0:
+        # 不允许查询没有任何权限的文档
+        raise BizException("common.forbidden")
+    accesses = Access.objects.filter(author_id=author_id, doc_id=doc_id)
+    if len(accesses) == 0:
+        raise BizException("common.not_found")
+    return accesses[0]
