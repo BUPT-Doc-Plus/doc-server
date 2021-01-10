@@ -30,7 +30,7 @@ class Author(models.Model):
 
 
 class Doc(models.Model):
-    label = models.CharField(max_length=256, verbose_name="label", blank=True)
+    label = models.CharField(max_length=255, verbose_name="label", blank=True)
     type = models.CharField(max_length=32)
     recycled = models.BooleanField(default=False)
 
@@ -65,8 +65,8 @@ class Access(models.Model):
 
 class Token(models.Model):
     author = models.OneToOneField(Author, related_name="author_token", on_delete=models.CASCADE)
-    content = models.CharField(max_length=256, unique=True, default=gen_token)
-    timestamp = models.IntegerField(default=now)
+    content = models.CharField(max_length=255, unique=True, default=gen_token)
+    timestamp = models.BigIntegerField(default=now)
 
     def expired(self, duration) -> bool:
         return time() * 1000 - self.timestamp > duration
@@ -88,4 +88,4 @@ class Token(models.Model):
 class DocTree(models.Model):
     author = models.OneToOneField(Author, related_name="author_doc_tree", on_delete=models.CASCADE)
     content = models.TextField(default=default_doc_tree)
-    timestamp = models.IntegerField(default=now)
+    timestamp = models.BigIntegerField(default=now)
