@@ -131,8 +131,8 @@ DATABASES = {
         'HOST': 'www.liadrinz.cn',
         'PORT': 3306,
         'TEST': {
-            'CHARSET' : 'utf8',
-            'COLLATION':'utf8_general_ci'
+            'CHARSET' : 'utf8mb4',
+            'COLLATION':'utf8mb4_general_ci'
         }
     }
 }
