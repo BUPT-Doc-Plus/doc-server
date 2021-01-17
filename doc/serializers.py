@@ -10,7 +10,7 @@ class DocAccessSerializer(serializers.HyperlinkedModelSerializer):
     author = AuthorRelatedExpandedField(read_only=True)
     class Meta:
         model = Access
-        fields = ["author", "role"]
+        fields = ["author", "role", "doc_id"]
 
 
 class DocAccessListField(serializers.RelatedField):

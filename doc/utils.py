@@ -1,11 +1,12 @@
 import base64
+import zlib
 import json
 from doc.responses import resp
 from doc.exceptions import BizException
 import random
 from hashlib import md5
 from time import time
-from typing import List, Set, Type
+from typing import Dict, List, Set, Type
 
 from rest_framework.serializers import Serializer
 

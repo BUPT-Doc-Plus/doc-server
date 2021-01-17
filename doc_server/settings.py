@@ -174,3 +174,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+# mid server
+MID_HOST = 'http://localhost:8088'
