@@ -1,14 +1,9 @@
-from typing import Any, Iterable
-from time import time
-from doc.models import Author, Doc, Access, Token
+from doc.models import Author, Token
 from doc.serializers import AuthorSerializer, DocAccessSerializer, DocSerializer, DocTreeSerializer
 from rest_framework.views import APIView
 from rest_framework.request import Request
-from rest_framework.response import Response
-from doc.responses import resp
 from doc.utils import api
 from doc import biz
-from doc.exceptions import BizException
 
 def u(request: Request) -> Author:
     s = request.query_params.get("token", None)
@@ -87,6 +82,24 @@ class DocDetail(APIView):
     @api(DocSerializer)
     def delete(self, request: Request, pk):
         return biz.delete_doc(pk, u(request))
+
+
+class DocQueryBatch(APIView):
+
+    @api(DocSerializer, many=True)
+    def post(self, request: Request):
+        doc_ids = set(request.data.get("ids", []))
+        from_tos = request.data.get("fts", [])
+        return biz.get_doc_batch(doc_ids, from_tos, u(request))
+
+
+class DocDeleteBatch(APIView):
+
+    @api()
+    def post(self, request: Request):
+        doc_ids = set(request.data.get("ids", []))
+        from_tos = request.data.get("fts", [])
+        return biz.del_doc_batch(doc_ids, from_tos, u(request))
 
 
 class AccessListView(APIView):

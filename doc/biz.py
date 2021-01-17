@@ -1,9 +1,11 @@
 import json
-from typing import Dict, Iterable, List
+import threading
+import requests
+from typing import Dict, Iterable, List, Set
 from doc_server import settings
 from django.db.models.query import QuerySet
 from doc.models import Author, Token, Doc, Access, DocTree
-from doc.serializers import AuthorSerializer, DocSerializer
+from doc.serializers import AuthorSerializer, DocAccessSerializer, DocSerializer
 from doc.exceptions import BizException
 from django.core.mail import send_mail
 from doc.utils import (
@@ -13,6 +15,7 @@ from doc.utils import (
     val_valid_code,
     trim_doc_tree,
     extract_doc_from_root)
+from doc_server import settings
 
 def get_authors(keyword: str) -> QuerySet:
     '''
@@ -177,6 +180,25 @@ def get_doc(doc_id: int, request_author: Author) -> Doc:
         return doc
     raise BizException("doc.not_r")
 
+def get_doc_batch(doc_ids: List[int], from_tos: List[str], request_author: Author) -> QuerySet:
+    '''
+    批量获取文档信息
+    '''
+    doc_ids: Set = set(doc_ids)
+    for ft in from_tos:
+        f, t = ft.split("-")
+        f, t = int(f), int(t)
+        doc_ids = doc_ids.union(list(range(f, t + 1)))
+    doc_ids = list(doc_ids)
+    valid_doc_ids = []
+    for doc_id in doc_ids:
+        try:
+            query_access(request_author.pk, doc_id, request_author)
+            valid_doc_ids.append(doc_id)
+        except:
+            pass
+    return Doc.objects.filter(pk__in=valid_doc_ids)
+
 def edit_doc_info(doc_id: int, data: Dict, request_author: Author) -> Doc:
     '''
     修改文档信息
@@ -195,10 +217,40 @@ def delete_doc(doc_id: int, request_author: Author) -> Doc:
     删除文档
     '''
     doc = get_doc(doc_id, request_author)
-    if not Access.can_dominate(request_author, doc):
+    if Access.can_dominate(request_author, doc):
+        doc.delete()
+        return doc
+    elif Access.can_collaborate(request_author, doc) or Access.can_read(request_author, doc):
+        Access.objects.filter(author=request_author, doc=doc).delete()
+        return doc
+    else:
         raise BizException("doc.not_d")
-    doc.delete()
-    return doc
+
+def del_doc_batch(doc_ids: List[int], from_tos: List[str], request_author: Author) -> Dict:
+    '''
+    批量删除文档
+    '''
+    doc_ids: Set = set(doc_ids)
+    for ft in from_tos:
+        f, t = ft.split("-")
+        f, t = int(f), int(t)
+        doc_ids = doc_ids.union(list(range(f, t + 1)))
+    doc_ids = list(doc_ids)
+    to_del = []
+    to_unlink = []
+    denied = []
+    for doc_id in doc_ids:
+        try:
+            access = query_access(request_author.pk, doc_id, request_author)
+            if access.role == 2:
+                to_del.append(doc_id)
+            else:
+                to_unlink.append(doc_id)
+        except BizException:
+            denied.append(doc_id)
+    Doc.objects.filter(pk__in=to_del).delete()
+    Access.objects.filter(author=request_author, doc_id__in=to_unlink).delete()
+    return { "deleted": to_del, "unlinked": to_unlink, "denied": denied }
 
 def grant_doc_to_author(doc_id: int, author_id: int, role: int, request_author: Author) -> Doc:
     '''
@@ -224,6 +276,10 @@ def grant_doc_to_author(doc_id: int, author_id: int, role: int, request_author: 
         access = existence[0]
         access.role = role
         access.save()
+    data = DocAccessSerializer(instance=access).data
+    threading.Thread(target=requests.post,
+        args=("{}/access_change".format(settings.MID_HOST),),
+        kwargs={"data": {"data": json.dumps(data)}}).start()
     return doc
 
 def cancel_access_to_doc(doc_id: int, author_id: int, request_author: Author) -> Doc:

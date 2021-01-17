@@ -29,4 +29,6 @@ urlpatterns = [
     path('invite/', views.AccessListView.as_view()),
     path('kick/<int:doc_id>/<int:author_id>', views.AccessDetailView.as_view()),
     path('doctree/<int:author_id>', views.DocTreeView.as_view()),
+    path('batch/query/doc', views.DocQueryBatch.as_view()),
+    path('batch/delete/doc', views.DocDeleteBatch.as_view()),
 ]
