@@ -276,7 +276,15 @@ def grant_doc_to_author(doc_id: int, author_id: int, role: int, request_author: 
         access = existence[0]
         access.role = role
         access.save()
-    data = DocAccessSerializer(instance=access).data
+    data = {
+        "type": "invite",
+        "doc": DocSerializer(doc).data,
+        "author": AuthorSerializer(author).data
+    }
+    threading.Thread(target=requests.post,
+        args=("{}/invite_or_kick".format(settings.MID_HOST),),
+        kwargs={"data": {"data": json.dumps(data)}}).start()
+    data = DocAccessSerializer(access).data
     threading.Thread(target=requests.post,
         args=("{}/access_change".format(settings.MID_HOST),),
         kwargs={"data": {"data": json.dumps(data)}}).start()
@@ -289,16 +297,28 @@ def cancel_access_to_doc(doc_id: int, author_id: int, request_author: Author) ->
     if doc_id is None or author_id is None:
         raise BizException("common.bad_request")
     doc = get_doc(doc_id, request_author)
+    author = get_author(author_id)
+    data = {
+        "type": "kick",
+        "doc": DocSerializer(doc).data,
+        "author": AuthorSerializer(author).data
+    }
     if Access.can_dominate(request_author, doc):
         # 不能取消创建者的权限
         if author_id == request_author.pk:
             raise BizException("doc.cannot_edit_d")
         Access.objects.filter(doc_id=doc_id, author_id=author_id).delete()
+        threading.Thread(target=requests.post,
+            args=("{}/invite_or_kick".format(settings.MID_HOST),),
+            kwargs={"data": {"data": json.dumps(data)}}).start()
         return doc
     # 非创建者只能取消自己的权限
     if author_id != request_author.pk:
         raise BizException("doc.forbidden_cancel")
     Access.objects.filter(doc_id=doc_id, author_id=author_id).delete()
+    threading.Thread(target=requests.post,
+        args=("{}/invite_or_kick".format(settings.MID_HOST),),
+        kwargs={"data": {"data": json.dumps(data)}}).start()
     return doc
 
 def complete_doc_tree(tree: DocTree, author: Author) -> None:
