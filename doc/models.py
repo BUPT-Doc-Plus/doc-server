@@ -89,3 +89,4 @@ class DocTree(models.Model):
     author = models.OneToOneField(Author, related_name="author_doc_tree", on_delete=models.CASCADE)
     content = models.TextField(default=default_doc_tree)
     timestamp = models.BigIntegerField(default=now)
+    REMAIN_FIELDS = ["id", "recycled"]

@@ -87,6 +87,11 @@ class DocDetail(APIView):
 class DocQueryBatch(APIView):
 
     @api(DocSerializer, many=True)
+    def get(self, request: Request):
+        keywords = request.query_params.get("keywords", None)
+        return biz.search_doc(keywords, u(request))
+
+    @api(DocSerializer, many=True)
     def post(self, request: Request):
         doc_ids = set(request.data.get("ids", []))
         from_tos = request.data.get("fts", [])

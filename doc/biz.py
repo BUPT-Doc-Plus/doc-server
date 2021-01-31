@@ -1,6 +1,7 @@
 import json
 import threading
 import requests
+from django.db.models import Q
 from typing import Dict, Iterable, List, Set
 from doc_server import settings
 from django.db.models.query import QuerySet
@@ -374,3 +375,12 @@ def query_access(author_id: int, doc_id: int, request_author: Author) -> Access:
     if len(accesses) == 0:
         raise BizException("common.not_found")
     return accesses[0]
+
+def search_doc(keywords: str, request_author: Author) -> QuerySet:
+    result = []
+    if keywords is None or keywords.strip() == "":
+        return result
+    for role in range(3):
+        res = get_doc_by_author_with_role(request_author.pk, role, request_author).filter(label__icontains=keywords)
+        result.extend(res)
+    return result
