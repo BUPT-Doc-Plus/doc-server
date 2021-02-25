@@ -1,3 +1,4 @@
+import re
 import base64
 import zlib
 import json
@@ -20,7 +21,11 @@ def digest(s: str, iter=3) -> str:
     return s
 
 def gen_valid_code(token) -> str:
-    return digest(token)[:6].upper()
+    md = digest(token)
+    md = re.sub(r'[A-Za-z]', '', md)
+    valid = md[:6]
+    valid += "0" * (6 - len(valid))
+    return valid
 
 def val_valid_code(code, token) -> bool:
     return code == gen_valid_code(token)

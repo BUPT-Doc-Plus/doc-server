@@ -77,8 +77,6 @@ class Token(models.Model):
         if len(tokens) == 0:
             return None
         token = tokens[0]
-        if token.expired(2.592e+9):
-            return None
         return token.author
     
     @staticmethod
@@ -90,3 +88,55 @@ class DocTree(models.Model):
     content = models.TextField(default=default_doc_tree)
     timestamp = models.BigIntegerField(default=now)
     REMAIN_FIELDS = ["id", "recycled"]
+
+class Chat(models.Model):
+    initiator = models.ForeignKey(Author, related_name="initiated_chats", on_delete=models.CASCADE)
+    recipient = models.ForeignKey(Author, related_name="received_chats", on_delete=models.CASCADE)
+    time = models.BigIntegerField(default=now)
+
+class Message(models.Model):
+    chat = models.ForeignKey(Chat, related_name="records", on_delete=models.CASCADE)
+    sender = models.ForeignKey(Author, related_name="sender_of", on_delete=models.SET_NULL, null=True)
+    receiver = models.ForeignKey(Author, related_name="receiver_of", on_delete=models.SET_NULL, null=True)
+    msg = models.TextField(default="", blank=True)
+    time = models.BigIntegerField(default=now)
+
+class ReadToken(models.Model):
+    doc = models.OneToOneField(Doc, related_name="doc_read_token", null=True, on_delete=models.CASCADE)
+    content = models.CharField(max_length=255, unique=True, default=gen_token)
+    timestamp = models.BigIntegerField(default=now)
+
+    def expired(self, duration) -> bool:
+        return time() * 1000 - self.timestamp > duration
+    
+    @staticmethod
+    def valid(s) -> Author:
+        tokens: Iterable[Token] = Token.objects.filter(content=s)
+        if len(tokens) == 0:
+            return None
+        token = tokens[0]
+        return token.author
+    
+    @staticmethod
+    def generate() -> str:
+        return gen_token()
+
+class CollaborateToken(models.Model):
+    doc = models.OneToOneField(Doc, related_name="doc_coll_token", null=True, on_delete=models.CASCADE)
+    content = models.CharField(max_length=255, unique=True, default=gen_token)
+    timestamp = models.BigIntegerField(default=now)
+
+    def expired(self, duration) -> bool:
+        return time() * 1000 - self.timestamp > duration
+    
+    @staticmethod
+    def valid(s) -> Author:
+        tokens: Iterable[Token] = Token.objects.filter(content=s)
+        if len(tokens) == 0:
+            return None
+        token = tokens[0]
+        return token.author
+    
+    @staticmethod
+    def generate() -> str:
+        return gen_token()

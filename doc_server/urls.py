@@ -31,4 +31,6 @@ urlpatterns = [
     path('doctree/<int:author_id>', views.DocTreeView.as_view()),
     path('batch/query/doc', views.DocQueryBatch.as_view()),
     path('batch/delete/doc', views.DocDeleteBatch.as_view()),
+    path('chat/', views.ChatView.as_view()),
+    path('chat/<int:pk>', views.ChatDetailView.as_view()),
 ]

@@ -1,5 +1,5 @@
 from doc.models import Author, Token
-from doc.serializers import AuthorSerializer, DocAccessSerializer, DocSerializer, DocTreeSerializer
+from doc.serializers import AuthorSerializer, ChatSerializer, DocAccessSerializer, DocSerializer, DocTreeSerializer, MessageSerializer
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from doc.utils import api
@@ -148,3 +148,26 @@ class DocTreeView(APIView):
     def post(self, request: Request, author_id: int):
         content = request.data.get("content", None)
         return biz.save_doc_tree(author_id, content, u(request))
+
+
+class ChatView(APIView):
+
+    @api(ChatSerializer, many=True)
+    def get(self, request: Request):
+        author_id1 = request.query_params.get("a1", None)
+        author_id2 = request.query_params.get("a2", None)
+        return biz.get_or_create_chat(author_id1, author_id2, u(request))
+
+    @api(MessageSerializer)
+    def post(self, request: Request):
+        sender = request.data.get("sender", None)
+        receiver = request.data.get("receiver", None)
+        msg = request.data.get("msg", None)
+        return biz.send_message(sender, receiver, msg, u(request))
+
+
+class ChatDetailView(APIView):
+
+    @api(ChatSerializer)
+    def get(self, request: Request, pk: int):
+        return biz.get_chat_by_id(pk, u(request))

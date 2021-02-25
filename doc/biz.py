@@ -2,11 +2,11 @@ import json
 import threading
 import requests
 from django.db.models import Q
-from typing import Dict, Iterable, List, Set
+from typing import Dict, Iterable, List, Set, Tuple
 from doc_server import settings
 from django.db.models.query import QuerySet
-from doc.models import Author, Token, Doc, Access, DocTree
-from doc.serializers import AuthorSerializer, DocAccessSerializer, DocSerializer
+from doc.models import Author, Chat, CollaborateToken, Message, ReadToken, Token, Doc, Access, DocTree
+from doc.serializers import AuthorSerializer, ChatSerializer, DocAccessSerializer, DocSerializer
 from doc.exceptions import BizException
 from django.core.mail import send_mail
 from doc.utils import (
@@ -15,7 +15,8 @@ from doc.utils import (
     gen_valid_code,
     val_valid_code,
     trim_doc_tree,
-    extract_doc_from_root)
+    extract_doc_from_root,
+    digest)
 from doc_server import settings
 
 def get_authors(keyword: str) -> QuerySet:
@@ -331,7 +332,8 @@ def complete_doc_tree(tree: DocTree, author: Author) -> None:
         return
     sup_docs: Iterable[Doc] = Doc.objects.filter(pk__in=sup_docs)
     for sup_doc in sup_docs:
-        root["children"][sup_doc.label + "-" + str(sup_doc.pk)] = {"id": sup_doc.pk}
+        key = digest(sup_doc.label + "-" + str(sup_doc.pk), iter=1)
+        root["children"][key] = {"id": sup_doc.pk}
     tree.content = json.dumps(root, ensure_ascii=False)
     tree.save()
 
@@ -377,6 +379,9 @@ def query_access(author_id: int, doc_id: int, request_author: Author) -> Access:
     return accesses[0]
 
 def search_doc(keywords: str, request_author: Author) -> QuerySet:
+    '''
+    搜索文档
+    '''
     result = []
     if keywords is None or keywords.strip() == "":
         return result
@@ -384,3 +389,54 @@ def search_doc(keywords: str, request_author: Author) -> QuerySet:
         res = get_doc_by_author_with_role(request_author.pk, role, request_author).filter(label__icontains=keywords)
         result.extend(res)
     return result
+
+def get_chat_by_id(chat_id: int, request_author: Author) -> Chat:
+    '''
+    根据id获取chat
+    '''
+    chats = Chat.objects.filter(pk=chat_id)
+    if len(chats) == 0:
+        raise BizException("common.not_found")
+    chat: Chat = chats[0]
+    if request_author.pk != chat.initiator.pk and request_author.pk != chat.recipient.pk:
+        raise BizException("chat.cannot_read")
+    return chat
+
+def get_or_create_chat(author_id1: int, author_id2: int, request_author: Author) -> Iterable:
+    '''
+    根据双方获取聊天, 没有则创建新聊天
+    '''
+    if request_author.pk != author_id1 and author_id2 is not None and request_author.pk != author_id2:
+        raise BizException("chat.cannot_read")
+    if author_id2 is not None:
+        chats = Chat.objects.filter(Q(initiator_id=author_id1) & Q(recipient_id=author_id2) |
+                            Q(initiator_id=author_id2) & Q(recipient_id=author_id1))
+        if len(chats) == 0:
+            recipient_id = author_id1 if author_id2 == request_author.pk else author_id2
+            chat = Chat.objects.create(initiator_id=request_author.pk, recipient_id=recipient_id)
+        else:
+            chat = chats[0]
+        return [chat]
+    chats = Chat.objects.filter(Q(initiator_id=author_id1) | Q(recipient_id=author_id1))
+    return chats
+
+def send_message(sender_id: int, receiver_id: int, msg: str, request_author: Author) -> Message:
+    '''
+    发送消息
+    '''
+    chat = get_or_create_chat(sender_id, receiver_id, request_author)[0]
+    message = Message.objects.create(chat=chat, sender_id=sender_id, receiver_id=receiver_id, msg=msg)
+    return message
+
+def get_invite_link(doc_id: int, auth: str, request_author: Author) -> str:
+    '''
+    获取邀请链接
+    '''
+    doc = get_doc(doc_id, request_author)
+    if auth == "read":
+        token = ReadToken.objects.create(doc=doc)
+    elif auth == "collaborate":
+        token = CollaborateToken.objects.create(doc=doc)
+    link = "http://" + settings.LOCALHOST + "/invite/{}?t={}"
+    link = link.format(doc_id, token.content)
+    return link

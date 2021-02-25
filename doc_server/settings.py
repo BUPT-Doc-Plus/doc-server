@@ -175,5 +175,6 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+LOCALHOST = 'http://localhost:8000'
 # mid server
 MID_HOST = 'http://localhost:8088'
