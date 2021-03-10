@@ -53,7 +53,7 @@ class MessageSerializer(serializers.HyperlinkedModelSerializer):
 
 class ChatRecordsField(serializers.RelatedField):
     def to_representation(self, value):
-        return MessageSerializer(value, many=True).data
+        return [val[0] for val in value.values_list("id")]
 
 
 class ChatSerializer(serializers.HyperlinkedModelSerializer):
@@ -63,3 +63,8 @@ class ChatSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Chat
         fields = ["id", "initiator", "recipient", "time", "records"]
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["preview"] = MessageSerializer(Message.objects.get(pk=data["records"][-1])).data
+        return data

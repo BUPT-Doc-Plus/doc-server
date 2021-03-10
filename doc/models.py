@@ -34,6 +34,9 @@ class Doc(models.Model):
     type = models.CharField(max_length=32)
     recycled = models.BooleanField(default=False)
 
+    def get_creator(self) -> Author:
+        return Access.objects.filter(doc=self, role=2)[0].author
+
 
 class Access(models.Model):
     author = models.ForeignKey(Author, related_name="author_accessible", on_delete=models.CASCADE)

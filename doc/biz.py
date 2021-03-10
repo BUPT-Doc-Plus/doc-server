@@ -10,7 +10,7 @@ from doc.serializers import AuthorSerializer, ChatSerializer, DocAccessSerialize
 from doc.exceptions import BizException
 from django.core.mail import send_mail
 from doc.utils import (
-    gen_token,
+    gen_token, now,
     parse_email,
     gen_valid_code,
     val_valid_code,
@@ -129,9 +129,8 @@ def login(email: str, password: str) -> str:
             if len(previous_tokens) == 0:
                 token = Token.objects.create(author=author).content
             else:
-                prev_token = previous_tokens[0]
-                prev_token.content = Token.generate()
-                prev_token.save()
+                prev_token: Token = previous_tokens[0]
+                prev_token.timestamp = now()
                 token = prev_token.content
             return token
         raise BizException("login.wrong")
@@ -170,7 +169,7 @@ def create_doc(doc_data: Dict, author_id: int, request_author: Author) -> Doc:
         return doc
     raise BizException("common.bad_request", srlzr.errors)
 
-def get_doc(doc_id: int, request_author: Author) -> Doc:
+def get_doc(doc_id: int, request_author: Author, token: str = None) -> Doc:
     '''
     获取文档信息
     '''
@@ -178,6 +177,13 @@ def get_doc(doc_id: int, request_author: Author) -> Doc:
     if len(docs) == 0:
         raise BizException("common.not_found")
     doc = docs[0]
+    if token is not None:
+        reads = ReadToken.objects.filter(content=token)
+        if len(reads):
+            grant_doc_to_author(doc.id, request_author.pk, 0, doc.get_creator())
+        colls = CollaborateToken.objects.filter(content=token)
+        if len(colls):
+            grant_doc_to_author(doc.id, request_author.pk, 1, doc.get_creator())
     if Access.can_read(request_author, doc):
         return doc
     raise BizException("doc.not_r")
@@ -428,15 +434,38 @@ def send_message(sender_id: int, receiver_id: int, msg: str, request_author: Aut
     message = Message.objects.create(chat=chat, sender_id=sender_id, receiver_id=receiver_id, msg=msg)
     return message
 
+def get_records(chat_id: int, page: int, page_size: int, request_author: Author) -> Message:
+    '''
+    根据id列表分页地获取消息
+    '''
+    chats = Chat.objects.filter(pk=chat_id)
+    if len(chats) == 0:
+        raise BizException("common.not_found")
+    chat: Chat = chats[0]
+    rows = Message.objects.filter(chat=chat).values_list("id")
+    ids = [row[0] for row in rows]
+    ids.reverse()
+    ids = ids[page_size*page:page_size*(page+1)]
+    messages = Message.objects.filter(pk__in=ids).filter(Q(sender=request_author)|Q(receiver=request_author))
+    return messages
+
 def get_invite_link(doc_id: int, auth: str, request_author: Author) -> str:
     '''
     获取邀请链接
     '''
     doc = get_doc(doc_id, request_author)
     if auth == "read":
-        token = ReadToken.objects.create(doc=doc)
+        tokens = ReadToken.objects.filter(doc=doc)
+        if len(tokens):
+            token = tokens[0]
+        else:
+            token = ReadToken.objects.create(doc=doc)
     elif auth == "collaborate":
-        token = CollaborateToken.objects.create(doc=doc)
-    link = "http://" + settings.LOCALHOST + "/invite/{}?t={}"
+        tokens = CollaborateToken.objects.filter(doc=doc)
+        if len(tokens):
+            token = tokens[0]
+        else:
+            token = CollaborateToken.objects.create(doc=doc)
+    link = settings.FRONT_HOST + "/#/invite/{}/{}"
     link = link.format(doc_id, token.content)
     return link

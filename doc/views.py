@@ -73,7 +73,8 @@ class DocDetail(APIView):
     
     @api(DocSerializer)
     def get(self, request: Request, pk):
-        return biz.get_doc(pk, u(request))
+        code = request.query_params.get("code", None)
+        return biz.get_doc(pk, u(request), code)
     
     @api(DocSerializer)
     def put(self, request: Request, pk):
@@ -171,3 +172,20 @@ class ChatDetailView(APIView):
     @api(ChatSerializer)
     def get(self, request: Request, pk: int):
         return biz.get_chat_by_id(pk, u(request))
+
+class GetInviteLink(APIView):
+
+    @api()
+    def get(self, request: Request):
+        doc_id = request.query_params.get("doc_id", None)
+        auth = request.query_params.get("auth", None)
+        return biz.get_invite_link(doc_id, auth, u(request))
+
+class GetRecords(APIView):
+
+    @api(MessageSerializer, many=True)
+    def get(self, request: Request):
+        chat_id = request.query_params.get("chat_id", None)
+        page = int(request.query_params.get("page", 0))
+        page_size = int(request.query_params.get("page_size", 10))
+        return biz.get_records(chat_id, page, page_size, u(request))
