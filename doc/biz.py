@@ -19,6 +19,11 @@ from doc.utils import (
     digest)
 from doc_server import settings
 
+import pymongo
+
+mongo_cli = pymongo.MongoClient(settings.MONGO_URL)
+db = mongo_cli[settings.MONGO_DB]
+
 def get_authors(keyword: str) -> QuerySet:
     '''
     用户列表
@@ -227,6 +232,8 @@ def delete_doc(doc_id: int, request_author: Author) -> Doc:
     doc = get_doc(doc_id, request_author)
     if Access.can_dominate(request_author, doc):
         doc.delete()
+        print(doc_id)
+        db["document"].delete_one({"_id": str(doc_id)})
         return doc
     elif Access.can_collaborate(request_author, doc) or Access.can_read(request_author, doc):
         Access.objects.filter(author=request_author, doc=doc).delete()
@@ -257,6 +264,7 @@ def del_doc_batch(doc_ids: List[int], from_tos: List[str], request_author: Autho
         except BizException:
             denied.append(doc_id)
     Doc.objects.filter(pk__in=to_del).delete()
+    db.document.delete_one({"_id": {"$in": [str(pk) for pk in to_del]}})
     Access.objects.filter(author=request_author, doc_id__in=to_unlink).delete()
     return { "deleted": to_del, "unlinked": to_unlink, "denied": denied }
 

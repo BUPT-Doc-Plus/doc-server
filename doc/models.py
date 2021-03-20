@@ -11,6 +11,7 @@ class Author(models.Model):
     email = models.EmailField(unique=True)
     nickname = models.CharField(max_length=128)
     password = models.CharField(max_length=128)
+    create_time = models.BigIntegerField(default=now)
     REQUIRED_FIELDS = ["nickname"]
     USERNAME_FIELD = "email"
 
@@ -33,6 +34,9 @@ class Doc(models.Model):
     label = models.CharField(max_length=255, verbose_name="label", blank=True)
     type = models.CharField(max_length=32)
     recycled = models.BooleanField(default=False)
+    full_text = models.TextField(blank=True)
+    create_time = models.BigIntegerField(default=now)
+    mod_time = models.BigIntegerField(default=now)
 
     def get_creator(self) -> Author:
         return Access.objects.filter(doc=self, role=2)[0].author

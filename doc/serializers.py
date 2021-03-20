@@ -23,10 +23,16 @@ class DocAccessListField(serializers.RelatedField):
         return DocAccessSerializer(value).data
 
 
+class AuthorAccessListField(serializers.RelatedField):
+    def to_representation(self, value):
+        return {"doc_id": value.doc_id, "role": value.role}
+
+
 class AuthorSerializer(serializers.HyperlinkedModelSerializer):
+    author_accessible = AuthorAccessListField(read_only=True, many=True)
     class Meta:
         model = Author
-        fields = ["id", "email", "nickname", "active"]
+        fields = ["id", "email", "nickname", "active", "author_accessible"]
 
 
 class DocSerializer(serializers.HyperlinkedModelSerializer):

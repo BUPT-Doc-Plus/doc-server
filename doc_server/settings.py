@@ -179,3 +179,11 @@ LOCALHOST = 'http://localhost:8000'
 FRONT_HOST = 'http://localhost:8080'
 # mid server
 MID_HOST = 'http://localhost:8088'
+
+# mongodb
+MONGO_HOST = 'www.liadrinz.cn'
+MONGO_PORT = 27017
+MONGO_USER = 'admin'
+MONGO_PWD = '077925'
+MONGO_DB = 'docs'
+MONGO_URL = f'mongodb://{MONGO_USER}:{MONGO_PWD}@{MONGO_HOST}:{MONGO_PORT}/?authSource=admin'
