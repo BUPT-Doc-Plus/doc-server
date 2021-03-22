@@ -54,7 +54,7 @@ class MessageSerializer(serializers.HyperlinkedModelSerializer):
     receiver = AuthorRelatedExpandedField(read_only=True)
     class Meta:
         model = Message
-        fields = ["chat_id", "sender", "receiver", "msg", "time"]
+        fields = ["id", "chat_id", "sender", "receiver", "msg", "time"]
 
 
 class ChatRecordsField(serializers.RelatedField):

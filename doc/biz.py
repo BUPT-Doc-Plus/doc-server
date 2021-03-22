@@ -400,9 +400,18 @@ def search_doc(keywords: str, request_author: Author) -> QuerySet:
     if keywords is None or keywords.strip() == "":
         return result
     for role in range(3):
-        res = get_doc_by_author_with_role(request_author.pk, role, request_author).filter(label__icontains=keywords)
+        res = get_doc_by_author_with_role(request_author.pk, role, request_author).filter(Q(label__icontains=keywords) | Q(full_text__icontains=keywords))
         result.extend(res)
     return result
+
+def search_message(keywords: str, request_author: Author) -> QuerySet:
+    '''
+    搜索聊天记录
+    '''
+    if keywords.strip() == "":
+        return []
+    messages = Message.objects.filter(Q(sender=request_author)|Q(receiver=request_author))
+    return messages.filter(msg__icontains=keywords)
 
 def get_chat_by_id(chat_id: int, request_author: Author) -> Chat:
     '''

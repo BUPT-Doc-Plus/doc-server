@@ -189,3 +189,11 @@ class GetRecords(APIView):
         page = int(request.query_params.get("page", 0))
         page_size = int(request.query_params.get("page_size", 10))
         return biz.get_records(chat_id, page, page_size, u(request))
+
+
+class MessageQuery(APIView):
+
+    @api(MessageSerializer, many=True)
+    def get(self, request: Request):
+        keywords = request.query_params.get("keywords", None)
+        return biz.search_message(keywords, u(request))
