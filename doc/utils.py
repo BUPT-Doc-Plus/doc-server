@@ -86,10 +86,10 @@ def trim_doc_tree(content: str) -> str:
     def trim(root: dict) -> None:
         if "children" not in root:
             id = root["id"]
-            recycled = root.get("recycled", False)
+            original = root.get("original", False)
             root.clear()
             root["id"] = id
-            root["recycled"] = recycled
+            root["original"] = original
         else:
             for key in root["children"]:
                 trim(root["children"][key])

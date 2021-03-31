@@ -94,7 +94,7 @@ class DocTree(models.Model):
     author = models.OneToOneField(Author, related_name="author_doc_tree", on_delete=models.CASCADE)
     content = models.TextField(default=default_doc_tree)
     timestamp = models.BigIntegerField(default=now)
-    REMAIN_FIELDS = ["id", "recycled"]
+    REMAIN_FIELDS = ["id", "original"]
 
 class Chat(models.Model):
     initiator = models.ForeignKey(Author, related_name="initiated_chats", on_delete=models.CASCADE)
