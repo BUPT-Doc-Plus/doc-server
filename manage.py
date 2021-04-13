@@ -12,10 +12,4 @@ if __name__ == "__main__":
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
-    if sys.argv[1] == "runserver":
-        import configparser
-        conf = configparser.ConfigParser()
-        conf.read("../config.ini")
-        sys.argv = sys.argv[:2]
-        sys.argv.append(f"{conf['doc-server']['host']}:{conf['doc-server']['port']}")
     execute_from_command_line(sys.argv)
