@@ -10,6 +10,11 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
+import configparser
+
+conf = configparser.ConfigParser()
+conf.read("../config.ini")
+
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -125,11 +130,11 @@ ASGI_APPLICATION = 'doc_server.routing.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'doc_plus',
-        'USER': 'root',
-        'PASSWORD': '077925',
-        'HOST': 'www.liadrinz.cn',
-        'PORT': 3306,
+        'NAME': conf["mysql"]["db"],
+        'USER': conf["mysql"]["user"],
+        'PASSWORD': conf["mysql"]["pwd"],
+        'HOST': conf["mysql"]["host"],
+        'PORT': conf["mysql"].getint("port"),
         'TEST': {
             'CHARSET' : 'utf8mb4',
             'COLLATION':'utf8mb4_general_ci'
@@ -175,15 +180,14 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-LOCALHOST = 'http://localhost:8000'
-FRONT_HOST = 'http://localhost:8080'
-# mid server
-MID_HOST = 'http://localhost:8088'
+LOCALHOST = f'http://${conf["doc-server"]["host"]}:${conf["doc-server"]["port"]}'
+FRONT_HOST = f'http://${conf["doc-client"]["host"]}:${conf["doc-client"]["port"]}'
+MID_HOST = f'http://${conf["doc-collaborate"]["host"]}:${conf["doc-collaborate"]["port"]}'
 
 # mongodb
-MONGO_HOST = 'www.liadrinz.cn'
-MONGO_PORT = 27017
-MONGO_USER = 'admin'
-MONGO_PWD = '077925'
-MONGO_DB = 'docs'
+MONGO_HOST = conf["mongodb"]["host"]
+MONGO_PORT = conf["mongodb"].getint("port")
+MONGO_USER = conf["mongodb"]["user"]
+MONGO_PWD = conf["mongodb"]["pwd"]
+MONGO_DB = conf["mongodb"]["db"]
 MONGO_URL = f'mongodb://{MONGO_USER}:{MONGO_PWD}@{MONGO_HOST}:{MONGO_PORT}/?authSource=admin'
